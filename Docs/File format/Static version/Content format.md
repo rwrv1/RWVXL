@@ -14,11 +14,11 @@ Let's take an example 4x4x4 RWVXL file, without the header, displayed in binary,
 `B 0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0`
 `X 0 1 2 3 0 1 2 3   0 1 2 3 0 1 2 3`
 `Y 0 0 0 0 1 1 1 1   2 2 2 2 3 3 3 3`
-`Z 2 2 2 2 2 2 2 2   2 2 2 2 2 2 2 2
-`
+`Z 2 2 2 2 2 2 2 2   2 2 2 2 2 2 2 2`
+
 `B 0 0 0 0 0 0 0 0   0 0 0 0 0 0 0 0`
 `X 0 1 2 3 0 1 2 3   0 1 2 3 0 1 2 3`
 `Y 0 0 0 0 1 1 1 1   2 2 2 2 3 3 3 3`
-`Z 3 3 3 3 3 3 3 3   3 3 3 3 3 3 3 3
+`Z 3 3 3 3 3 3 3 3   3 3 3 3 3 3 3 3`
 
 As we can see, the X is incremented with each bit, the Y with each reset of X, the Z with each reset of Y. At the end of the model, the file simply ends. No footer needed.
