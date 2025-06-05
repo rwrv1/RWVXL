@@ -1,11 +1,12 @@
 // imports
-use std::fs; use std::os::unix::process;
+use std::fs;
 // used for file handling
 use std::str; // used for handling of the name
 use bitvec::prelude::*; // used for handling of the voxel data
 
 
 // object for a static voxel
+#[derive(Debug)]
 pub struct VoxelObject {
     pub name: String,
     pub data: VoxelData,
@@ -18,6 +19,7 @@ pub struct AnimatedVoxelObject {
 }
 
 // struct to contain raw voxel data
+#[derive(Debug)]
 pub struct VoxelData {
     pub size: (u32, u32, u32),
     pub voxels: Vec<Vec<BitVec<u8, Msb0>>>,
@@ -70,7 +72,7 @@ fn process_file(path: &str) -> Vec<StrOrVecOrInt32OrBool> {
     let file_contents = fs::read(path)
         .expect("Failed to read file");
     // First 8 bytes of file are the name
-    let name = str::from_utf8(&file_contents[0..7].to_vec())
+    let name = str::from_utf8(&file_contents[0..8].to_vec())
         .expect("Name is invalid UTF-8")
         .to_string();
     // Bytes 17-24 are the size of the voxel object
@@ -88,6 +90,26 @@ fn process_file(path: &str) -> Vec<StrOrVecOrInt32OrBool> {
         StrOrVecOrInt32OrBool::T32(size)]
 }
 
+fn process_frame(frame_num: u32, voxels_raw: &BitSlice<u8, Msb0>, size: (u32, u32, u32)) -> VoxelData {
+    let frame_size = size.0 * size.1 * size.2;
+    let frame: &BitSlice<u8, Msb0> = &voxels_raw[(frame_num * frame_size as u32) as usize..((frame_num + 1) * frame_size as u32) as usize];
+    let mut voxels: Vec<Vec<BitVec<u8, Msb0>>> = Vec::new();
+    for plane in 0..size.2 {
+        let mut plane_voxels: Vec<BitVec<u8, Msb0>> = Vec::new();
+        for row in 0..size.1 {
+            let segment_idx = (plane * size.2 + row) as usize;
+            let start = segment_idx * size.0 as usize;
+            let end = start + size.0 as usize;
+            let segment: BitVec<u8, Msb0> = frame[start..end].to_bitvec();
+            plane_voxels.push(segment);
+        }
+        voxels.push(plane_voxels);}
+    VoxelData {
+        size,
+        voxels,
+    }
+}
+
 // importer for static voxel objects
 pub fn import_rwvxl(path: &str) -> VoxelObject {
     let file_processed_vec = process_file(path);
@@ -96,20 +118,8 @@ pub fn import_rwvxl(path: &str) -> VoxelObject {
     let name = file_processed_vec[1].clone().into_string().expect("Name is not a String");
     println!("Size: {}x{}x{}", size.0, size.1, size.2);
     let voxels_raw: &BitSlice<u8, Msb0> = file_contents[32..].view_bits::<Msb0>();
-    let mut voxels: Vec<Vec<BitVec<u8, Msb0>>> = Vec::new();
-    for plane in 0..size.2 {
-        let mut plane_voxels: Vec<BitVec<u8, Msb0>> = Vec::new();
-        for row in 0..size.1 {
-            let segment_idx = (plane * size.2 + row) as usize;
-            let start = segment_idx * size.0 as usize;
-            let end = start + size.0 as usize;
-            let segment: BitVec<u8, Msb0> = voxels_raw[start..end].to_bitvec();
-            plane_voxels.push(segment);
-        }
-        voxels.push(plane_voxels);
-    }
     VoxelObject {
         name,
-        data: VoxelData { size, voxels },
+        data: process_frame(0, voxels_raw, size),
     }
 }

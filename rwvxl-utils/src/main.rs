@@ -1,5 +1,5 @@
 mod objects;
 
 fn main() {
-    println!("Nothing here yet!");
+    println!("{:?}", objects::import_rwvxl("../blank.rwvxl"));
 }
