@@ -27,7 +27,7 @@ pub struct VoxelData {
 
 // this feels pointless but sure i guess
 #[derive(Clone)]
-enum StrOrVecOrInt32OrBool {
+enum MultiType {
     Str(String),
     Vec(Vec<u8>),
     T32((u32, u32, u32)),
@@ -35,7 +35,7 @@ enum StrOrVecOrInt32OrBool {
     Bool(bool),
 }
 
-impl StrOrVecOrInt32OrBool {
+impl MultiType {
     fn into_string(self) -> Option<String> {
         match self {
             Self::Str(s) => Some(s),
@@ -68,7 +68,7 @@ impl StrOrVecOrInt32OrBool {
     }
 }
 
-fn process_file(path: &str) -> Vec<StrOrVecOrInt32OrBool> {
+fn process_file(path: &str) -> Vec<MultiType> {
     let file_contents = fs::read(path)
         .expect("Failed to read file");
     // First 8 bytes of file are the name
@@ -83,11 +83,11 @@ fn process_file(path: &str) -> Vec<StrOrVecOrInt32OrBool> {
     );
     let version = i32::from_le_bytes(file_contents[28..32].try_into().expect("Invalid version"));
     let animated = file_contents[13] == 65;
-    vec![StrOrVecOrInt32OrBool::Vec(file_contents),
-        StrOrVecOrInt32OrBool::Str(name),
-        StrOrVecOrInt32OrBool::Bool(animated),
-        StrOrVecOrInt32OrBool::Int32(version),
-        StrOrVecOrInt32OrBool::T32(size)]
+    vec![MultiType::Vec(file_contents),
+        MultiType::Str(name),
+        MultiType::Bool(animated),
+        MultiType::Int32(version),
+        MultiType::T32(size)]
 }
 
 fn process_frame(frame_num: u32, voxels_raw: &BitSlice<u8, Msb0>, size: (u32, u32, u32)) -> VoxelData {
