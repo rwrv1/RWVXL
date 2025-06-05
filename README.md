@@ -1,0 +1,1 @@
+RWVXL is a simple 1-bit-per-voxel compressed voxel storage format. I created this file format to develop my programming more, and might use it somewhere in the future.
