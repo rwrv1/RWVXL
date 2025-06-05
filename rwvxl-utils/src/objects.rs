@@ -94,9 +94,9 @@ fn process_file(path: &str) -> Vec<MultiType> {
 }
 
 // process a single frame of voxel data
-fn process_frame(frame_num: u32, voxels_raw: &BitSlice<u8, Msb0>, size: (u32, u32, u32)) -> VoxelData {
+fn process_frame(frame_num: u16, voxels_raw: &BitSlice<u8, Msb0>, size: (u32, u32, u32)) -> VoxelData {
     let frame_size = size.0 * size.1 * size.2; // calculate size of one frame
-    let frame: &BitSlice<u8, Msb0> = &voxels_raw[(frame_num * frame_size as u32) as usize..((frame_num + 1) * frame_size as u32) as usize]; // only process the frame requested
+    let frame: &BitSlice<u8, Msb0> = &voxels_raw[(frame_num as u32 * frame_size as u32) as usize..((frame_num as u32 + 1) * frame_size as u32) as usize]; // only process the frame requested
     let mut voxels: Vec<Vec<BitVec<u8, Msb0>>> = Vec::new(); // create final voxels vector to hold the processed data
     for plane in 0..size.2 {
         let mut plane_voxels: Vec<BitVec<u8, Msb0>> = Vec::new(); // create a temporary inner vector to hold the voxels for this plane
@@ -117,17 +117,40 @@ fn process_frame(frame_num: u32, voxels_raw: &BitSlice<u8, Msb0>, size: (u32, u3
 
 // importer for static voxel objects
 pub fn import_rwvxl(path: &str) -> VoxelObject {
+    // call processing function and extract needed data
     let file_processed_vec = process_file(path);
     let file_contents = file_processed_vec[0].clone().into_vec().expect("File contents are not a Vec<u8>");
     let size = file_processed_vec[4].clone().into_t32().expect("Size is not a (u32, u32, u32)");
     let name = file_processed_vec[1].clone().into_string().expect("Name is not a String");
     if file_processed_vec[2].clone().into_bool().expect("Animated flag is not a bool") {
-        panic!("This is an animated voxel file, use import_rwvxla instead.");
+        panic!("This is an animated voxel file, use import_rwvxla instead."); // things can go very wrong if this check is not done
     }
-    println!("Size: {}x{}x{}", size.0, size.1, size.2);
-    let voxels_raw: &BitSlice<u8, Msb0> = file_contents[32..].view_bits::<Msb0>();
+    let voxels_raw: &BitSlice<u8, Msb0> = file_contents[32..].view_bits::<Msb0>(); // due to weirdness with pointers i'm yet to understand, we can't do this in process_file
     VoxelObject {
         name,
-        data: process_frame(0, voxels_raw, size),
+        data: process_frame(0, voxels_raw, size), // frame 0 is the only frame in a static voxel object
+    }
+}
+
+// importer for animated voxel objects
+pub fn import_rwvxla(path: &str) -> AnimatedVoxelObject {
+    // call processing function and extract needed data
+    let file_processed_vec = process_file(path);
+    let file_contents = file_processed_vec[0].clone().into_vec().expect("File contents are not a Vec<u8>");
+    let size = file_processed_vec[4].clone().into_t32().expect("Size is not a (u32, u32, u32)");
+    let name = file_processed_vec[1].clone().into_string().expect("Name is not a String");
+    let framecount = file_processed_vec[3].clone().into_int32().expect("Frame count is not an i32") as u16; // convert to u16 for easier handling
+    if !file_processed_vec[2].clone().into_bool().expect("Animated flag is not a bool") {
+        panic!("This is a static voxel file, use import_rwvxl instead."); // things can go very wrong if this check is not done
+    }
+    let voxels_raw: &BitSlice<u8, Msb0> = file_contents[32..].view_bits::<Msb0>(); // due to weirdness with pointers i'm yet to understand, we can't do this in process_file
+    let mut frames: Vec<VoxelData> = Vec::new(); // create a vector to hold all frames
+    for frame in 0..framecount {
+        frames.push(process_frame(frame, voxels_raw, size)); // process each frame and push it to the vector
+    }
+    AnimatedVoxelObject {
+        name,
+        framecount,
+        frames,
     }
 }
